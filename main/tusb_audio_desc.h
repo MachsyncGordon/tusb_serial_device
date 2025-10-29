@@ -1,0 +1,54 @@
+#pragma once
+
+// TinyUSB 音訊配置
+#define CFG_TUD_AUDIO 1
+#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN (TUD_AUDIO_MIC_ONE_CH_DESC_LEN + TUD_AUDIO_DESC_IAD_LEN)
+#define CFG_TUD_AUDIO_FUNC_1_N_AS_INT 1
+#define CFG_TUD_AUDIO_N_AS_INT 1
+#define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ 64
+#define CFG_TUD_AUDIO_CTRL_BUF_SIZE 64
+
+#include "device/usbd.h"
+#include "class/audio/audio.h"
+#include "tusb.h"
+
+// 音訊格式設定
+#define AUDIO_SAMPLE_RATE  16000  // 16 kHz
+#define AUDIO_BIT_WIDTH    16     // 16-bit
+#define AUDIO_CHANNELS     1      // 單聲道
+#define EP_INTERVAL_MS     1      // 1ms 間隔
+
+// 音訊格式描述符
+#define CFG_TUD_AUDIO 1
+#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN (TUD_AUDIO_MIC_ONE_CH_DESC_LEN + TUD_AUDIO_DESC_IAD_LEN)
+#define CFG_TUD_AUDIO_FUNC_1_N_AS_INT 1  // 一個音訊串流介面
+#define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE 2
+#define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX 0
+#define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX 1
+#define CFG_TUD_AUDIO_FUNC_1_EP_SZ_IN (AUDIO_SAMPLE_RATE * 2 / 1000)
+
+// 音訊控制緩衝區大小
+#define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ 64
+#define CFG_TUD_AUDIO_CTRL_BUF_SIZE 64
+
+// 音訊串流介面數量
+#define CFG_TUD_AUDIO_N_AS_INT 1
+
+// 音訊端點設定
+#define AUDIO_EP_SZ(n) (AUDIO_SAMPLE_RATE * AUDIO_BIT_WIDTH/8 * AUDIO_CHANNELS * n / 1000)
+#define CFG_TUD_AUDIO_EP_SZ_IN AUDIO_EP_SZ(EP_INTERVAL_MS)
+#define CFG_TUD_AUDIO_ENABLE 1
+
+// 配置描述符
+#define TUSB_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO_FUNC_1_DESC_LEN)
+
+// 音訊配置描述符
+#define AUDIO_CONFIG_DESC_LEN (TUD_CONFIG_DESC_LEN + TUD_AUDIO_MIC_ONE_CH_DESC_LEN)
+
+#define AUDIO_DESCRIPTOR_INIT() \
+  /* 配置描述符 */ \
+  TUD_CONFIG_DESCRIPTOR(1, 1, 0, AUDIO_CONFIG_DESC_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100), \
+  /* 音訊功能描述符 */ \
+  TUD_AUDIO_MIC_ONE_CH_DESCRIPTOR(0, 4, AUDIO_SAMPLE_RATE, AUDIO_BIT_WIDTH, 1, 0x81)
+
+const uint8_t audio_configuration_descriptor[] = { AUDIO_DESCRIPTOR_INIT() };

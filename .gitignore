@@ -1,0 +1,39 @@
+# ESP-IDF 專案忽略檔案
+
+# 建置目錄
+build/
+managed_components/
+
+# 編譯產物
+*.bin
+*.elf
+*.map
+*.obj
+*.a
+*.o
+
+# 設定檔案
+sdkconfig.old
+sdkconfig.ci*
+
+# 日誌檔案
+log/
+
+# IDE 檔案
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# Python 快取
+__pycache__/
+*.pyc
+*.pyo
+
+# 臨時檔案
+*.tmp
+*.temp
