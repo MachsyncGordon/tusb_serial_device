@@ -9,11 +9,11 @@
 // ========= SPI Slave 硬體配置 =========
 // SPI 腳位定義（請根據實際硬體連接調整）
 #define LCD_SPI_HOST    SPI2_HOST
-#define LCD_PIN_MISO    19      // SPI MISO 信號
-#define LCD_PIN_MOSI    3      // SPI MOSI 信號
-#define LCD_PIN_SCLK    4      // SPI SCLK 信號
-#define LCD_PIN_CS      2       // SPI CS 信號
-#define LCD_PIN_CD      1       // Command/Data 選擇信號（高電位=資料，低電位=命令）
+#define LCD_PIN_MISO    12      // SPI MISO 信號
+#define LCD_PIN_MOSI    9      // SPI MOSI 信號
+#define LCD_PIN_SCLK    8      // SPI SCLK 信號
+#define LCD_PIN_CS      7       // SPI CS 信號
+#define LCD_PIN_CD      10       // Command/Data 選擇信號（高電位=資料，低電位=命令）
 
 // DMA 配置
 #define LCD_DMA_CHAN    SPI_DMA_CH_AUTO  // ESP32-S3 需使用自動分配
