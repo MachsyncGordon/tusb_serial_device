@@ -103,7 +103,7 @@ static size_t expected_len = 0;  // 預期長度（F=9, P=5）
 
 // 暫存 F 和 P 的值用於合併輸出
 static char freq_value[8] = {0};  // 儲存頻率值 (例如 "26.781k")
-static char power_value[4] = {0}; // 儲存電壓值 (例如 "16V")
+static char power_value[5] = {0}; // 儲存電壓值 (例如 "16V")
 static bool has_freq = false;
 
 // SPI 統計報告任務（每秒發送統計到 USB）
@@ -186,8 +186,8 @@ static void lcd_spi_slave_task(void *pvParameters)
                     // 重置累積
                     accumulated_len = 0;
                     accumulated_buffer[accumulated_len++] = byte;
-                    // 設定預期長度：F=xx.xxxk (9字元), P=xxV (5字元)
-                    expected_len = (byte == 'F') ? 9 : 5;
+                    // 設定預期長度：F=xx.xxxk (9字元), P=xxV/xxxV (5-6字元，偵測V結束)
+                    expected_len = (byte == 'F') ? 9 : 6;  // P 設為最大6字元
                     continue;
                 }
                 
@@ -195,8 +195,16 @@ static void lcd_spi_slave_task(void *pvParameters)
                 if (accumulated_len > 0 && accumulated_len < LCD_MAX_SIZE) {
                     accumulated_buffer[accumulated_len++] = byte;
                     
-                    // 檢查是否達到預期長度
-                    if (accumulated_len == expected_len) {
+                    // 對於 P 格式，偵測到 V 即完成；對於 F 格式，需達到固定長度
+                    bool should_check = false;
+                    if (accumulated_buffer[0] == 'F' && accumulated_len == expected_len) {
+                        should_check = true;
+                    } else if (accumulated_buffer[0] == 'P' && byte == 'V' && accumulated_len >= 4) {
+                        should_check = true;
+                    }
+                    
+                    // 檢查是否達到預期長度或偵測到結束字元
+                    if (should_check) {
                         // 驗證格式
                         bool is_valid = false;
                         
@@ -214,13 +222,14 @@ static void lcd_spi_slave_task(void *pvParameters)
                                     }
                                 }
                             }
-                        } else if (accumulated_buffer[0] == 'P' && accumulated_len == 5) {
-                            // 格式：P=xxV
-                            // 位置：0=P, 1==, 2-3=數字, 4=V
-                            if (accumulated_buffer[1] == '=' && accumulated_buffer[4] == 'V') {
+                        } else if (accumulated_buffer[0] == 'P' && accumulated_len >= 4) {
+                            // 格式：P=xV, P=xxV 或 P=xxxV
+                            // 找到 V 的位置
+                            int v_pos = accumulated_len - 1;
+                            if (accumulated_buffer[1] == '=' && accumulated_buffer[v_pos] == 'V') {
                                 is_valid = true;
-                                // 驗證中間是數字
-                                for (int j = 2; j < 4; j++) {
+                                // 驗證中間是數字（從位置2到V之前）
+                                for (int j = 2; j < v_pos; j++) {
                                     char c = accumulated_buffer[j];
                                     if (!(c >= '0' && c <= '9')) {
                                         is_valid = false;
@@ -240,12 +249,29 @@ static void lcd_spi_slave_task(void *pvParameters)
                                 freq_value[7] = '\0';
                                 has_freq = true;
                             } else if (accumulated_buffer[0] == 'P' && has_freq) {
-                                // P=xxV → 提取 "xxV"
-                                memcpy(power_value, &accumulated_buffer[2], 2);  // 複製 "xx"
-                                power_value[2] = 'V';
-                                power_value[3] = '\0';
+                                // P=xV, P=xxV 或 P=xxxV → 動態提取電壓值，補齊到3位數
+                                int num_len = accumulated_len - 3;  // 減去 "P=V" 的長度
                                 
-                                // 合併輸出：[DATA] 26.781k 16V
+                                // 根據數字位數補齊到3位（例如：5V→005V，16V→016V，81V→081V，100V→100V）
+                                if (num_len == 1) {
+                                    power_value[0] = '0';
+                                    power_value[1] = '0';
+                                    power_value[2] = accumulated_buffer[2];
+                                    power_value[3] = 'V';
+                                    power_value[4] = '\0';
+                                } else if (num_len == 2) {
+                                    power_value[0] = '0';
+                                    power_value[1] = accumulated_buffer[2];
+                                    power_value[2] = accumulated_buffer[3];
+                                    power_value[3] = 'V';
+                                    power_value[4] = '\0';
+                                } else {  // num_len >= 3
+                                    memcpy(power_value, &accumulated_buffer[2], num_len);
+                                    power_value[num_len] = 'V';
+                                    power_value[num_len + 1] = '\0';
+                                }
+                                
+                                // 合併輸出：[DATA] 26.781k 100V
                                 char output[64];
                                 int len = snprintf(output, sizeof(output),
                                     "[DATA] %s %s\r\n", freq_value, power_value);
